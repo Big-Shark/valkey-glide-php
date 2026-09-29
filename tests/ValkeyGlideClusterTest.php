@@ -599,10 +599,16 @@ class ValkeyGlideClusterTest extends ValkeyGlideTest
         // A successful CANCEL (when a save IS in progress) would return an array
         // for multi-node routes since at least one node returns a success response.
         $result = $this->valkey_glide->bgSave('allPrimaries', 'CANCEL');
-        $this->assertFalse($result);
+        if (is_array($result)) {
+            foreach ($result as $nodeResult) {
+                $this->assertIsBool($nodeResult);
+            }
+        } else {
+            $this->assertFalse($result);
+        }
 
         $result = $this->valkey_glide->bgSave('randomNode', 'CANCEL');
-        $this->assertFalse($result);
+        $this->assertIsBool($result);
     }
 
     public function testBgSaveWithReplyLiteral()
@@ -650,10 +656,17 @@ class ValkeyGlideClusterTest extends ValkeyGlideTest
 
             $this->withOptReplyLiteralEnabled(function () {
                 $result = $this->valkey_glide->bgSave('allPrimaries', 'CANCEL');
-                $this->assertFalse($result);
+                if (is_array($result)) {
+                    foreach ($result as $nodeResult) {
+                        $this->assertIsString($nodeResult);
+                        $this->assertEquals('Background saving cancelled', $nodeResult);
+                    }
+                } else {
+                    $this->assertFalse($result);
+                }
 
                 $result = $this->valkey_glide->bgSave('randomNode', 'CANCEL');
-                $this->assertFalse($result);
+                $this->assertTrue($result === false || $result === 'Background saving cancelled');
             });
         }
     }

@@ -124,18 +124,27 @@ abstract class ValkeyGlideClusterBaseTest extends ValkeyGlideBaseTest
     /* Override newInstance as we want a ValkeyGlideCluster object */
     protected function newInstance()
     {
-        try {
-            return new ValkeyGlideCluster(
-                addresses: [['host' => $this->getHost(), 'port' => $this->getPort()]],
-                use_tls: false,
-                credentials: $this->getAuth(),
-                read_from: ValkeyGlide::READ_FROM_PRIMARY
-            );
-        } catch (Exception $ex) {
-            TestSuite::errorMessage("Fatal error: %s\n", $ex->getMessage());
-            //TestSuite::errorMessage("Seeds: %s\n", implode(' ', self::$seeds));
-            TestSuite::errorMessage("Seed source: %s\n", self::$seed_source);
-            exit(1);
+        $addresses = [['host' => $this->getHost(), 'port' => $this->getPort()]];
+        $attempts = 3;
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                return new ValkeyGlideCluster(
+                    addresses: $addresses,
+                    use_tls: false,
+                    credentials: $this->getAuth(),
+                    read_from: ValkeyGlide::READ_FROM_PRIMARY,
+                    request_timeout: 10000
+                );
+            } catch (Exception $ex) {
+                if ($attempt === $attempts) {
+                    TestSuite::errorMessage("Fatal error: %s\n", $ex->getMessage());
+                    //TestSuite::errorMessage("Seeds: %s\n", implode(' ', self::$seeds));
+                    TestSuite::errorMessage("Seed source: %s\n", self::$seed_source);
+                    exit(1);
+                }
+                echo "Warning: Cluster client connection attempt $attempt failed ({$ex->getMessage()}), retrying in 500ms...\n";
+                usleep(500000);
+            }
         }
     }
 
